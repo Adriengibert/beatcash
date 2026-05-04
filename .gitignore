@@ -1,0 +1,25 @@
+# Credentials & secrets — NE JAMAIS COMMITTER
+client_secrets.json
+token.pickle
+instagram_session.json
+*.pickle
+*.token
+
+# Build artifacts
+build/
+dist/
+dist_installer/
+__pycache__/
+*.pyc
+*.pyo
+*.spec.bak
+
+# Logs & temp
+*.log
+*.tmp
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
