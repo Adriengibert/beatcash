@@ -1,13 +1,11 @@
 # BeatCash — Instructions Claude
 
-## Mémoire rapide — lis ça en premier
+## Mémoire rapide — chargée automatiquement
 
-Vault Obsidian complet : `C:\Users\giber\Documents\BEATCASH\`
-Lis dans cet ordre au début de chaque session :
-1. `🎯 État Actuel.md` — état du projet, tâches en cours
-2. `🏗️ Architecture.md` — variables, méthodes, palette
-3. `🔧 Commandes.md` — build exe, installeur
-4. `📝 Historique.md` — log de tous les changements
+@C:\Users\giber\Documents\BEATCASH\🎯 État Actuel.md
+@C:\Users\giber\Documents\BEATCASH\🏗️ Architecture.md
+@C:\Users\giber\Documents\BEATCASH\🔧 Commandes.md
+@C:\Users\giber\Documents\BEATCASH\📝 Historique.md
 
 ---
 
