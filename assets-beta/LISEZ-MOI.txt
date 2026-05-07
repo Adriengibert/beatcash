@@ -1,0 +1,109 @@
+================================================================
+  $ BEATCASH — BETA
+  desktop publishing pour producteurs · YouTube + Instagram + TikTok
+================================================================
+
+Merci d'aider à tester Beat Cash. Cette version est en BETA :
+toutes les features Pro sont débloquées (BETA.flag dans le dossier).
+
+
+─── PREMIER LANCEMENT ─────────────────────────────────────────
+
+1. Double-clique sur :
+       BeatCashReact.exe
+       (ou Lancer-BETA.bat — équivalent)
+
+2. Windows va probablement afficher "Windows a protégé votre PC"
+   (SmartScreen — normal pour un .exe non signé en beta) :
+       → Clique "Plus d'infos"
+       → Puis "Exécuter quand même"
+
+3. Une fenêtre noire $ BEATCASH s'ouvre avec 4 onglets :
+   Publier · Suivi · Connexions · SEO & Profils
+
+
+─── CONNECTER TES COMPTES ─────────────────────────────────────
+
+Onglet "Connexions" :
+
+YouTube
+   → Clique "Connecter"
+   → Ton navigateur s'ouvre sur une page Google
+   → Choisis ton compte YouTube
+   → Accepte les permissions (upload vidéos)
+   → Tu es renvoyé vers l'app, indicateur passe au vert
+
+Instagram
+   → Clique "Connecter"
+   → 3 prompts s'ouvrent : login, mot de passe, code 2FA
+   → (Mot de passe stocké uniquement en local, jamais envoyé
+      sur Internet — sert à créer une session locale instagrapi)
+   → Si tu n'as pas de 2FA, laisse vide le 3e prompt
+
+TikTok
+   → Pas dispo dans cette beta (review Bytedance en cours)
+
+
+─── PUBLIER UN BEAT ──────────────────────────────────────────
+
+Onglet "Publier" :
+   1. Drag & drop un fichier MP4 dans la zone (ou clique pour parcourir)
+   2. Tape un titre (sinon le nom du fichier sera utilisé)
+   3. Active YouTube et/ou Instagram
+   4. Choisis Statut + Catégorie YouTube
+   5. Clique le gros bouton blanc "PUBLIER MAINTENANT"
+   6. La barre de progression avance, attends le résultat
+
+Le résultat s'affiche en bas avec un statut par plateforme :
+   "youtube : ✓ · instagram : ✓"
+ou en cas d'échec :
+   "youtube : ✗ message d'erreur"
+
+
+─── SUIVRE TES BEATS ──────────────────────────────────────────
+
+Onglet "Suivi" : tableau de bord avec
+   - Vues totales (toutes plateformes)
+   - Revenu estimé (€)
+   - Beats publiés (compteur)
+   - Liste de tes derniers beats avec vues/revenue/tendance 7j
+
+Note : dans cette beta, les chiffres sont des MOCK
+(vraie analytics arrivera quand le backend cloud sera branché).
+
+
+─── EN CAS DE BUG ─────────────────────────────────────────────
+
+Un fichier de log est créé automatiquement à côté du .exe :
+       beatcash.log
+
+Quand tu reportes un bug, joins ce fichier.
+
+Channel feedback : (à compléter par l'auteur)
+   Discord : ...
+   ou email : ...
+
+
+─── DÉSINSTALLATION ───────────────────────────────────────────
+
+Pas d'installeur, donc pas de désinstallation : supprime juste
+le dossier BeatCashReact/. Les sessions stockées
+(token.pickle, instagram_session.json) sont dans ce dossier.
+
+
+─── CE QUI MARCHE / CE QUI NE MARCHE PAS DANS CETTE BETA ────
+
+✓ UI complète (Publier · Suivi · Connexions · SEO & Profils)
+✓ Drag & drop fichiers
+✓ OAuth YouTube → upload vidéo
+✓ Login Instagram → upload Reel
+✓ Page Suivi avec stats par beat (mock data)
+✗ TikTok publish (en attente review API)
+✗ Audiomack (à venir)
+✗ Watch folder (UI affichée mais pas implémenté côté Python)
+✗ Scheduled publishing (idem)
+✗ Vraies analytics (placeholder pour l'instant)
+
+
+Merci ! Chaque retour vaut de l'or à ce stade.
+                                                           — l'équipe Beat Cash

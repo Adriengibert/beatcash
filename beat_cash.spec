@@ -9,7 +9,7 @@ from PyInstaller.utils.hooks import collect_all, collect_data_files
 block_cipher = None
 
 # ── Collecte des paquets complexes ──────────────────────────────────────
-datas      = []
+datas      = [("fonts", "fonts")]   # bundle Syncopate + Space Mono
 binaries   = []
 hiddenimports = []
 

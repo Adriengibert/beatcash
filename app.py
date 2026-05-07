@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Beat Cash — Upload Bot"""
 
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import sys, math, pickle, threading, subprocess, tempfile, tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
@@ -14,6 +18,24 @@ def _appdir() -> Path:
     if getattr(sys, 'frozen', False):
         return Path(sys.executable).parent
     return Path(__file__).parent
+
+# ── Chargement fonts custom (Windows) ──────────────────────────────────
+def _load_bundled_fonts():
+    """Enregistre Syncopate + Space Mono pour la session courante."""
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        FR_PRIVATE = 0x10
+        fonts_dir = _appdir() / "fonts"
+        if not fonts_dir.exists():
+            return
+        for ttf in fonts_dir.glob("*.ttf"):
+            ctypes.windll.gdi32.AddFontResourceExW(str(ttf), FR_PRIVATE, 0)
+    except Exception:
+        pass
+
+_load_bundled_fonts()
 
 try:
     from google.auth.transport.requests import Request
@@ -72,7 +94,9 @@ def _resolve_font():
         pass
     return "Segoe UI"
 
-_FONT = "Segoe UI"  # resolved in App.__init__ via _init_fonts()
+_FONT = "Segoe UI"          # body / UI — resolved in _init_fonts()
+_FONT_DISPLAY = "Segoe UI"  # logo, gros titres (Syncopate si dispo)
+_FONT_MONO = "Consolas"     # mono (Space Mono si dispo)
 
 # ── Typographic scale (ratio 1.4) ────────────────────────────────────────
 T_DISPLAY = (_FONT, 28, "bold")
@@ -95,14 +119,22 @@ def _lerp_color(c1, c2, t):
     return "#{:02x}{:02x}{:02x}".format(
         int(r1+(r2-r1)*t), int(g1+(g2-g1)*t), int(b1+(b2-b1)*t))
 
-# ── Dark Apple (actif par défaut) ─────────────────────────────────────
-_DK = "#0d0d0e"   # bg principal — near-black
-_DN = "#111113"   # nav — un cran plus sombre que bg
-_DS = "#2c2c2e"   # bordures / séparateurs
-_DC = "#161618"   # cards niveau 1
-_DE = "#1c1c1e"   # cards niveau 2 / inputs
-_DF = "#f2f2f7"   # fg primaire — blanc cassé
-_DU = "#98989f"   # fg secondaire — gris neutre
+# ── Dark Mode OLED — recommandé par ui-ux-pro-max pour BeatCash ────────
+# "Studio purple + waveform green on dark", deep midnight blue-black
+_DK = "#0F172A"   # bg principal — deep midnight blue-black (OLED)
+_DN = "#0a1020"   # nav — un cran plus sombre
+_DS = "#1f2942"   # bordures / séparateurs
+_DC = "#171939"   # cards niveau 1 — muted blue-purple
+_DE = "#1d2240"   # cards niveau 2 / inputs
+_DF = "#FFFFFF"   # fg primaire — full white (OLED contrast)
+_DU = "#9aa0b4"   # fg secondaire — gris bleuté neutre
+_DZ = "#5a6080"   # fg tertiaire — très estompé
+_DH = "#2a3050"   # highlight border (cards)
+GLOW_HOT = "#ff5a52"   # halo accent (hover rouge brand)
+PURPLE = "#7C3AED"     # accent secondaire — studio purple (skill)
+PURPLE_H = "#9d6df0"   # purple hover
+WAVE = "#22C55E"       # waveform green (skill — connect OK)
+DESTRUCT = "#DC2626"   # erreur (skill)
 
 SCOPES           = ["https://www.googleapis.com/auth/youtube.upload"]
 CREDENTIALS_FILE = _appdir() / "client_secrets.json"
@@ -125,11 +157,14 @@ class AppleBtn(ctk.CTkButton):
     def __init__(self, parent, text, command=None, style="primary",
                  font=None, padx=20, pady=8, **kw):
         style_map = {
-            "primary":   {"fg_color": BLUE,    "hover_color": BLUE_H,  "text_color": "#ffffff"},
-            "secondary": {"fg_color": _DE,     "hover_color": _DS,     "text_color": _DU},
-            "ghost":     {"fg_color": "transparent", "hover_color": _DS, "text_color": _DU,
-                          "border_width": 1, "border_color": _DS},
-            "danger":    {"fg_color": RED,     "hover_color": "#ff6b63","text_color": "#ffffff"},
+            "primary":   {"fg_color": BLUE,    "hover_color": GLOW_HOT, "text_color": "#ffffff",
+                          "border_width": 1, "border_color": GLOW_HOT},
+            "secondary": {"fg_color": _DE,     "hover_color": _DS,     "text_color": _DF,
+                          "border_width": 1, "border_color": _DH},
+            "ghost":     {"fg_color": "transparent", "hover_color": _DE, "text_color": _DU,
+                          "border_width": 1, "border_color": _DH},
+            "danger":    {"fg_color": RED,     "hover_color": "#ff6b63","text_color": "#ffffff",
+                          "border_width": 1, "border_color": "#ff6b63"},
         }
         s = dict(style_map.get(style, style_map["primary"]))
         f = font if isinstance(font, ctk.CTkFont) else ctk.CTkFont(
@@ -140,7 +175,7 @@ class AppleBtn(ctk.CTkButton):
         bw = s.pop("border_width", 0)
         bc = s.pop("border_color", _DS)
         super().__init__(parent, text=text, command=command,
-                         font=f, corner_radius=8,
+                         font=f, corner_radius=10,
                          border_width=bw, border_color=bc,
                          **s, **kw)
         self._enabled = True
@@ -459,9 +494,9 @@ class PillDropdown(tk.Frame):
 
 
 def card(parent, pady=(0, SP["md"]), padx=0, **kw):
-    """Carte CTk avec bordure fine et corner_radius."""
-    f = ctk.CTkFrame(parent, fg_color=_DC, corner_radius=12,
-                     border_width=1, border_color=_DS, **kw)
+    """Carte futuriste : bordure subtile, corner radius prononcé."""
+    f = ctk.CTkFrame(parent, fg_color=_DC, corner_radius=14,
+                     border_width=1, border_color=_DH, **kw)
     f.pack(fill="x", pady=pady, padx=padx)
     return f
 
@@ -523,11 +558,22 @@ def get_youtube():
     if _yt: return _yt
     creds = None
     if TOKEN_FILE.exists():
-        with open(TOKEN_FILE,"rb") as f: creds = pickle.load(f)
+        try:
+            with open(TOKEN_FILE,"rb") as f: creds = pickle.load(f)
+        except Exception:
+            TOKEN_FILE.unlink(missing_ok=True)
+            creds = None
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except Exception:
+                # Token révoqué ou expiré — on repart de zéro
+                TOKEN_FILE.unlink(missing_ok=True)
+                creds = None
+        if not creds:
+            if not CREDENTIALS_FILE.exists():
+                raise FileNotFoundError("client_secrets.json introuvable")
             flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_FILE), SCOPES)
             creds = flow.run_local_server(port=0)
         with open(TOKEN_FILE,"wb") as f: pickle.dump(creds, f)
@@ -606,7 +652,6 @@ class App(TkinterDnD.Tk if DND_OK else ctk.CTk):
 
         self._init_fonts()
         self._build()
-        self.after(120, self._run_splash)   # splash après rendu initial
 
     # ──────────────────────────────────────────────────────────────────
     # ANIMATION DE DÉMARRAGE
@@ -734,25 +779,41 @@ class App(TkinterDnD.Tk if DND_OK else ctk.CTk):
         step()
 
     def _init_fonts(self):
-        """Détecte Segoe UI Variable (Win11) et met à jour les constantes T_*."""
-        global _FONT, T_DISPLAY, T_HEADING, T_SUBHEAD, T_BODY, T_SMALL, T_MICRO
+        """Détecte les fonts custom (Syncopate display + Space Mono) avec fallback."""
+        global _FONT, _FONT_DISPLAY, _FONT_MONO
+        global T_DISPLAY, T_HEADING, T_SUBHEAD, T_BODY, T_SMALL, T_MICRO
         global CTK_DISPLAY, CTK_HEADING, CTK_BODY, CTK_SMALL
         import tkinter.font as tkf
         try:
             avail = set(tkf.families())
+            # Body / UI : Segoe UI Variable > Inter > Segoe UI
             for f in ("Segoe UI Variable", "Inter", "Aptos", "Segoe UI"):
                 if f in avail:
                     _FONT = f
                     break
+            # Display (logo, gros titres) : Syncopate (skill) > Bahnschrift > _FONT
+            _FONT_DISPLAY = _FONT
+            for f in ("Syncopate", "Bahnschrift Condensed", "Bahnschrift", _FONT):
+                if f in avail:
+                    _FONT_DISPLAY = f
+                    break
+            # Mono (numéros, statuts techniques) : Space Mono (skill) > Cascadia > Consolas
+            _FONT_MONO = _FONT
+            for f in ("Space Mono", "Cascadia Mono", "Cascadia Code", "Consolas", _FONT):
+                if f in avail:
+                    _FONT_MONO = f
+                    break
         except Exception:
             _FONT = "Segoe UI"
-        T_DISPLAY = (_FONT, 24, "bold")
+            _FONT_DISPLAY = _FONT
+            _FONT_MONO = _FONT
+        T_DISPLAY = (_FONT_DISPLAY, 24, "bold")
         T_HEADING  = (_FONT, 13, "bold")
         T_SUBHEAD  = (_FONT, 11, "bold")
         T_BODY     = (_FONT, 11)
         T_SMALL    = (_FONT, 10)
         T_MICRO    = (_FONT, 9)
-        CTK_DISPLAY = ctk.CTkFont(family=_FONT, size=24, weight="bold")
+        CTK_DISPLAY = ctk.CTkFont(family=_FONT_DISPLAY, size=24, weight="bold")
         CTK_HEADING = ctk.CTkFont(family=_FONT, size=13, weight="bold")
         CTK_BODY    = ctk.CTkFont(family=_FONT, size=11)
         CTK_SMALL   = ctk.CTkFont(family=_FONT, size=10)
@@ -894,33 +955,36 @@ class App(TkinterDnD.Tk if DND_OK else ctk.CTk):
     # LOGO  — Style Warhol $ sign  +  déclencheur de thème
     # ──────────────────────────────────────────────────────────────────
     def _draw_logo(self, parent):
-        """Logo BeatCash — pure CTk, pas de Canvas."""
-        frame = ctk.CTkFrame(parent, fg_color=_DN, corner_radius=0)
-        frame.pack(side="left")
+        """Logo BeatCash — wordmark Syncopate ($) + double trait glow."""
+        container = ctk.CTkFrame(parent, fg_color=_DN, corner_radius=0)
+        container.pack(side="left")
 
-        # $ en rouge Impact
-        ctk.CTkLabel(frame, text="$",
-                     font=ctk.CTkFont("Impact", 36),
+        row = ctk.CTkFrame(container, fg_color=_DN, corner_radius=0)
+        row.pack(side="top", anchor="w")
+
+        # $ — accent rouge brand (Warhol heritage)
+        ctk.CTkLabel(row, text="$",
+                     font=ctk.CTkFont(family=_FONT_DISPLAY, size=30, weight="bold"),
                      text_color=BLUE,
-                     fg_color=_DN).pack(side="left", padx=(0, 6))
+                     fg_color=_DN).pack(side="left", padx=(0, 6), pady=(0, 0))
 
-        # Colonne BEAT / ligne / CASH
-        col = ctk.CTkFrame(frame, fg_color=_DN, corner_radius=0)
-        col.pack(side="left", pady=4)
-
-        ctk.CTkLabel(col, text="BEAT",
-                     font=ctk.CTkFont("Impact", 16),
+        # BEATCASH — wordmark Syncopate, full white pour OLED contrast
+        ctk.CTkLabel(row, text="BEATCASH",
+                     font=ctk.CTkFont(family=_FONT_DISPLAY, size=15, weight="bold"),
                      text_color=_DF,
-                     fg_color=_DN).pack(anchor="w")
+                     fg_color=_DN).pack(side="left", pady=(6, 0))
 
-        line = ctk.CTkFrame(col, fg_color=BLUE, height=2, width=72, corner_radius=1)
-        line.pack(anchor="w", pady=1)
-        line.pack_propagate(False)
+        # Glow underline rouge fin (intense)
+        underline = ctk.CTkFrame(container, fg_color=BLUE,
+                                 height=2, width=160, corner_radius=1)
+        underline.pack(side="top", anchor="w", padx=(2, 0), pady=(2, 0))
+        underline.pack_propagate(False)
 
-        ctk.CTkLabel(col, text="CASH",
-                     font=ctk.CTkFont("Impact", 16),
-                     text_color=BLUE,
-                     fg_color=_DN).pack(anchor="w")
+        # Sous-glow purple plus diffus (skill secondary accent)
+        underline2 = ctk.CTkFrame(container, fg_color=PURPLE,
+                                  height=1, width=130, corner_radius=1)
+        underline2.pack(side="top", anchor="w", padx=(2, 0), pady=(0, 0))
+        underline2.pack_propagate(False)
 
         self._logo_draw = lambda dark=True: None  # compat
 
@@ -1270,16 +1334,66 @@ class App(TkinterDnD.Tk if DND_OK else ctk.CTk):
 
         self._sid_frame = ctk.CTkFrame(ig_in, fg_color=_DC, corner_radius=0)
         self._sid_frame.pack(anchor="w", fill="x")
-        sublabel(self._sid_frame,
-                 "Opera GX → instagram.com → F12 → Application → Cookies → copier la valeur de sessionid",
-                 9).pack(anchor="w",pady=(0,6))
+
+        # ── Guide pas-à-pas ──────────────────────────────────────────
+        guide = ctk.CTkFrame(self._sid_frame, fg_color=_DE, corner_radius=8)
+        guide.pack(fill="x", pady=(0, 10))
+
+        # Header guide
+        g_head = ctk.CTkFrame(guide, fg_color=_DE, corner_radius=0)
+        g_head.pack(fill="x", padx=12, pady=(10, 6))
+        ctk.CTkLabel(g_head, text="Comment trouver ton sessionid ?",
+                     font=ctk.CTkFont(family=_FONT, size=10, weight="bold"),
+                     text_color=_DF, fg_color="transparent").pack(side="left")
+        AppleBtn(g_head, text="Ouvrir Instagram →", style="primary",
+                 font=ctk.CTkFont(family=_FONT, size=10),
+                 height=24,
+                 command=lambda: __import__("webbrowser").open("https://www.instagram.com")
+                 ).pack(side="right")
+
+        # Étapes
+        steps = [
+            ("1", "Connecte-toi sur Instagram dans ton navigateur"),
+            ("2", "Appuie sur  F12  (outils développeur)"),
+            ("3", "Onglet  Application  →  Cookies  →  instagram.com"),
+            ("4", "Cherche la ligne  sessionid  — copie la valeur"),
+        ]
+        for num, txt in steps:
+            row = ctk.CTkFrame(guide, fg_color=_DE, corner_radius=0)
+            row.pack(fill="x", padx=12, pady=1)
+            # Badge numéro
+            badge = ctk.CTkFrame(row, fg_color=BLUE, corner_radius=10, width=18, height=18)
+            badge.pack(side="left", padx=(0, 8))
+            badge.pack_propagate(False)
+            ctk.CTkLabel(badge, text=num,
+                         font=ctk.CTkFont(family=_FONT, size=9, weight="bold"),
+                         text_color="#ffffff", fg_color="transparent").place(relx=0.5, rely=0.5, anchor="center")
+            ctk.CTkLabel(row, text=txt,
+                         font=ctk.CTkFont(family=_FONT, size=10),
+                         text_color=_DU, fg_color="transparent").pack(side="left")
+        ctk.CTkFrame(guide, fg_color=_DE, height=8, corner_radius=0).pack()  # spacer bas
+
+        # ── Champ sessionid + bouton Coller ──────────────────────────
         sid_row = ctk.CTkFrame(self._sid_frame, fg_color=_DC, corner_radius=0)
         sid_row.pack(anchor="w")
         ctk.CTkLabel(sid_row, text="sessionid :",
-                     font=ctk.CTkFont(family=_FONT,size=10,weight="bold"),
+                     font=ctk.CTkFont(family=_FONT, size=10, weight="bold"),
                      text_color=_DF, fg_color="transparent").pack(side="left")
         self._sid_var = tk.StringVar()
-        entry(sid_row, self._sid_var, width=300).pack(side="left", padx=(8,0))
+        entry(sid_row, self._sid_var, width=260).pack(side="left", padx=(8, 6))
+
+        def _paste_sid():
+            try:
+                val = self.clipboard_get().strip()
+                if val:
+                    self._sid_var.set(val)
+            except Exception:
+                pass
+
+        AppleBtn(sid_row, text="Coller", style="secondary",
+                 font=ctk.CTkFont(family=_FONT, size=10),
+                 height=28,
+                 command=_paste_sid).pack(side="left")
 
         self._pw_frame = ctk.CTkFrame(ig_in, fg_color=_DC, corner_radius=0)
         self._ig_user_var = tk.StringVar()
